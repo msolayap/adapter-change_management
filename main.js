@@ -1,47 +1,128 @@
-// Update this constant with your ServiceNow credentials
 const options = {
-  url: 'https://dev65741.service-now.com/',
+  url: 'https://dev61798.service-now.com/',
   username: 'admin',
-  password: '7ml8AEXRpieN',
+  password: 'Yv1zUYrJ3aWr',
   serviceNowTable: 'change_request'
 };
 
-
-/**
- * Import the Node.js request package.
- * See https://www.npmjs.com/package/request
- */
-const request = require('request');
-
-
-// We'll use this regular expression to verify REST API's HTTP response status code.
-const validResponseRegex = /(2\d\d)/;
-
-// Import built-in Node.js package path.
 const path = require('path');
 
-/**
- * Import the ServiceNowConnector class from local Node.js module connector.js.
- *   and assign it to constant ServiceNowConnector.
- * When importing local modules, IAP requires an absolute file reference.
- * Built-in module path's join method constructs the absolute filename.
- */
 const ServiceNowConnector = require(path.join(__dirname, './connector.js'));
 
-/**
- * @function mainOnObject
- * @description Instantiates an object from the imported ServiceNowConnector class
- *   and tests the object's get and post methods.
- */
-function mainOnObject() {
-  // Instantiate an object from class ServiceNowConnector.
-  const connector = new ServiceNowConnector(options);
-  // Test the object's get and post methods.
-  // You must write the arguments for get and post.
-  connector.get();
-  connector.post();
+const EventEmitter = require('events').EventEmitter;
 
+class ServiceNowAdapter extends EventEmitter {
+
+  constructor(id, adapterProperties) {
+
+    super();
+
+    this.id = id;
+    this.props = adapterProperties;    
+
+    this.connector = new ServiceNowConnector({        
+      url: this.props.url,
+      username: this.props.auth.username,
+      password: this.props.auth.password,
+      serviceNowTable: this.props.serviceNowTable
+    });    
+  }
+  
+  connect() {
+    this.healthcheck();
+  }
+  
+  healthcheck() {
+      this.getRecord((result, error) => {
+          console.log("healthcheck: " + result + " ERROR: " + error);
+          log.info("healthcheck: " + result + " ERROR: " + error);
+
+          if (error) {
+              log.warn('ServiceNow: Instance is OFFLINE.');
+              this.emitOffline();
+          } else {
+                log.warn('ServiceNow: Instance is ONLINE.');
+                this.emitOnline();
+          }
+      });
+  }
+
+  emitOffline() {
+    this.emitStatus('OFFLINE');
+    log.warn('ServiceNow: Instance is unavailable.');
+  }
+
+  emitOnline() {
+    this.emitStatus('ONLINE');
+    log.info('ServiceNow: Instance is available.');
+  }
+
+  emitStatus(status) {
+    this.emit(status, { id: this.id });
+  }
+
+  getRecord(callback) {
+      console.log("getRecord is called");
+      log.info('calling getRecord method.');
+
+      let callbackData = null;
+      let callbackError = null;
+            
+      this.connector.get((data, error) => {
+          if (error) {
+              callbackError = JSON.stringify(error);
+              console.error(`\nError returned from GET request:\n${JSON.stringify(error)}`);
+          } else {                
+                var jsonObj  = JSON.parse(data.body);
+                
+                console.log("String: " + data.statusCode);
+                console.log("String: " + jsonObj.result[0].number);
+                
+                var obj = {};
+                obj["change_ticket_number"] = jsonObj.result[0].number;
+                obj["active"]               = jsonObj.result[0].active;
+                obj["priority"]             = jsonObj.result[0].priority;
+                obj["description"]          = jsonObj.result[0].description;
+                obj["work_start"]           = jsonObj.result[0].work_start;
+                obj["work_end"]             = jsonObj.result[0].work_end;   
+                obj["change_ticket_key"]    = jsonObj.result[0].sys_id;
+
+                var arrObj = [obj];
+          }        
+      
+        return callback(arrObj, callbackError);
+      });
+  }
+
+  postRecord(callback) {
+      console.log('calling postRecord method.');
+      log.info('calling postRecord method.');
+      
+      let callbackError = null;
+            
+      this.connector.post((data, error) => {
+          if (error) {
+              callbackError = JSON.stringify(error);
+              console.error(`\nError returned from POST request:\n${JSON.stringify(error)}`);
+          } else {
+                var jsonObj  = JSON.parse(data.body);
+                
+                console.log("String: " + data.statusCode);
+                console.log("String: " + jsonObj.result.number);
+                
+                var obj = {};
+                obj["change_ticket_number"] = jsonObj.result.number;
+                obj["active"]               = jsonObj.result.active;
+                obj["priority"]             = jsonObj.result.priority;
+                obj["description"]          = jsonObj.result.description;
+                obj["work_start"]           = jsonObj.result.work_start;
+                obj["work_end"]             = jsonObj.result.work_end;   
+                obj["change_ticket_key"]    = jsonObj.result.sys_id;
+          }
+      
+        return callback(obj, callbackError);
+      });
+  }
 }
 
-// Call mainOnObject to run it.
-mainOnObject();
+module.exports = ServiceNowAdapter;
