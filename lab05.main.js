@@ -31,31 +31,19 @@ class ServiceNowAdapter extends EventEmitter {
   connect() {
     this.healthcheck();
   }
-  /**
- * @memberof ServiceNowAdapter
- * @method healthcheck
- * @summary Check ServiceNow Health
- * @description Verifies external system is available and healthy.
- *   Calls method emitOnline if external system is available.
- *
- * @param {ServiceNowAdapter~requestCallback} [callback] - The optional callback
- *   that handles the response.
- */
-  healthcheck(callback) {
+  
+  healthcheck() {
       this.getRecord((result, error) => {
           console.log("healthcheck: " + result + " ERROR: " + error);
           log.info("healthcheck: " + result + " ERROR: " + error);
-          
 
           if (error) {
-              log.error('ServiceNow: Instance is OFFLINE.');
+              log.warn('ServiceNow: Instance is OFFLINE.');
               this.emitOffline();
           } else {
                 log.warn('ServiceNow: Instance is ONLINE.');
                 this.emitOnline();
           }
-          
-          
       });
   }
 

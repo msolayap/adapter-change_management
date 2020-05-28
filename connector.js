@@ -193,7 +193,8 @@ isHibernating(response) {
     post(callback) {
         let postCallOptions = { ...this.options } ;
         postCallOptions.method = 'POST';
-        this.sendRequest(postCallOptions, (results, error) => this.iapCallback(results, error));
+        if(callback) {}
+        this.sendRequest(postCallOptions, (results, error) => callback(results, error));
     }
 
   /**
@@ -214,7 +215,7 @@ isHibernating(response) {
     let getCallOptions = { ...this.options };
     getCallOptions.method = 'GET';
     getCallOptions.query = 'sysparm_limit=1';
-    this.sendRequest(getCallOptions, (results, error) => this.iapCallback(results, error));
+    this.sendRequest(getCallOptions, (results, error) => callback(results, error));
   }
 
 }
